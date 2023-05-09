@@ -1,0 +1,3 @@
+https://github.com/neetika6/Machine-Learning-Model-for-Weather-Forecasting/blob/main/forecast.ipynb
+
+https://www.kaggle.com/code/allusai/naive-bayes-and-random-forest/notebook
