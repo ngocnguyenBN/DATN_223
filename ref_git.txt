@@ -1,3 +1,14 @@
 https://github.com/neetika6/Machine-Learning-Model-for-Weather-Forecasting/blob/main/forecast.ipynb
 
 https://www.kaggle.com/code/allusai/naive-bayes-and-random-forest/notebook
+
+
+1.  Chọn mẫu boostrap: random
+    Chọn best split: độ biến động dữ liệu Của trái + phải (độ biến động = số mẫu * phương sai)
+
+2. 
+    Chọn mẫu boostrap: Subsampling without Replacement
+    Chọn best slit: quên rồi
+
+3. 
+
