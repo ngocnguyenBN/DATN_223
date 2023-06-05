@@ -57,7 +57,7 @@ app.layout = html.Div([
 
         dcc.Tab(label='Old Prediction Stock Data', children=[
             html.Div([
-                html.H1("Stocks Actual vs Predictions by SkLearn RF", 
+                html.H1("Stocks Actual vs Predictions by only RF", 
                         style={'textAlign': 'center'}),
               
                 dcc.Dropdown(id='my-dropdown',
@@ -68,9 +68,13 @@ app.layout = html.Div([
                              multi=True,value=['STB'],
                              style={"display": "block", "margin-left": "auto", 
                                     "margin-right": "auto", "width": "60%"}),
-                dcc.Graph(id='sklearn'),
-                html.H1("Stocks Actual vs Predictions by DIY RF", style={'textAlign': 'center'}),
-                dcc.Graph(id='diy'),
+                dcc.Graph(id='none'),
+                html.H1("Stocks Actual vs Predictions by RF-MV", style={'textAlign': 'center'}),
+                dcc.Graph(id='mv'),
+                html.H1("Stocks Actual vs Predictions by RF-Opt", style={'textAlign': 'center'}),
+                dcc.Graph(id='opt'),
+                html.H1("Stocks Actual vs Predictions by RF-MV-Opt", style={'textAlign': 'center'}),
+                dcc.Graph(id='mv-opt'),
             ], className="container"),
         ])
     ])
@@ -237,7 +241,7 @@ def update_graph(selected_dropdown):
     testPredictPlot = np.empty_like(closedf)
     testPredictPlot[:, :] = np.nan
     testPredictPlot[len(RF_train_predict)+(look_back*2)+1:len(closedf)-1, :] = RF_test_predict
-    close_stock['Predictions']=testPredictPlo
+    close_stock['Predictions']=testPredictPlot
     print(close_stock['Close'])
     print(close_stock['Predictions'])
     trace1 = []
@@ -273,24 +277,30 @@ def update_graph(selected_dropdown):
  
  
  
-@app.callback(Output('sklearn', 'figure'),
+@app.callback(Output('none', 'figure'),
               [Input('my-dropdown', 'value')])
 def update_graph(selected_dropdown):
     dropdown = {"STB": "STB","HAG": "HAG","FB": "Facebook","MSFT": "Microsoft",}
     trace1 = []
     trace2 = []
+    trace3 = []
     for stock in selected_dropdown:
         trace1.append(
-          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn")]["Date"],
-                     y=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn")]["Close"],
+          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "None")]["Date"],
+                     y=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "None")]["Close"],
                      mode='lines', opacity=0.7, 
                      name=f'Actual {dropdown[stock]}',textposition='bottom center'))
         trace2.append(
-          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn")]["Date"],
-                     y=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn")]["Predictions"],
+          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "None")]["Date"],
+                     y=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "None")]["Predictions"],
                      mode='lines', opacity=0.6,
-                     name=f'Prediction {dropdown[stock]}',textposition='bottom center'))
-    traces = [trace1, trace2]
+                     name=f'SkLearn model Prediction {dropdown[stock]}',textposition='bottom center'))
+        trace3.append(
+          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "DIY") & (df["Method"] == "None")]["Date"],
+                     y=df[(df["Stock"] == stock) & (df["Model"] == "DIY") & (df["Method"] == "None")]["Predictions"],
+                     mode='lines', opacity=0.6,
+                     name=f'DIY model Prediction {dropdown[stock]}',textposition='bottom center'))
+    traces = [trace1, trace2, trace3]
     data = [val for sublist in traces for val in sublist]
     figure = {'data': data,
               'layout': go.Layout(colorway=["#5E0DAC", '#FF4F00', '#375CB1', 
@@ -308,26 +318,31 @@ def update_graph(selected_dropdown):
                    'rangeslider': {'visible': True}, 'type': 'date'},
              yaxis={"title":"Price (VND)"})}
     return figure
- 
- 
-@app.callback(Output('diy', 'figure'),
+
+@app.callback(Output('mv', 'figure'),
               [Input('my-dropdown', 'value')])
 def update_graph(selected_dropdown):
     dropdown = {"STB": "STB","HAG": "HAG","FB": "Facebook","MSFT": "Microsoft",}
     trace1 = []
     trace2 = []
+    trace3 = []
     for stock in selected_dropdown:
         trace1.append(
-          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "DIY")]["Date"],
-                     y=df[(df["Stock"] == stock) & (df["Model"] == "DIY")]["Close"],
+          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "MV")]["Date"],
+                     y=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "MV")]["Close"],
                      mode='lines', opacity=0.7, 
                      name=f'Actual {dropdown[stock]}',textposition='bottom center'))
         trace2.append(
-          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "DIY")]["Date"],
-                     y=df[(df["Stock"] == stock) & (df["Model"] == "DIY")]["Predictions"],
+          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "MV")]["Date"],
+                     y=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "MV")]["Predictions"],
                      mode='lines', opacity=0.6,
-                     name=f'Prediction {dropdown[stock]}',textposition='bottom center'))
-    traces = [trace1, trace2]
+                     name=f'SkLearn model with MV Prediction {dropdown[stock]}',textposition='bottom center'))
+        trace3.append(
+          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "DIY") & (df["Method"] == "MV")]["Date"],
+                     y=df[(df["Stock"] == stock) & (df["Model"] == "DIY") & (df["Method"] == "MV")]["Predictions"],
+                     mode='lines', opacity=0.6,
+                     name=f'DIY model with MV Prediction {dropdown[stock]}',textposition='bottom center'))
+    traces = [trace1, trace2, trace3]
     data = [val for sublist in traces for val in sublist]
     figure = {'data': data,
               'layout': go.Layout(colorway=["#5E0DAC", '#FF4F00', '#375CB1', 
@@ -345,8 +360,90 @@ def update_graph(selected_dropdown):
                    'rangeslider': {'visible': True}, 'type': 'date'},
              yaxis={"title":"Price (VND)"})}
     return figure
- 
- 
+
+@app.callback(Output('opt', 'figure'),
+              [Input('my-dropdown', 'value')])
+def update_graph(selected_dropdown):
+    dropdown = {"STB": "STB","HAG": "HAG","FB": "Facebook","MSFT": "Microsoft",}
+    trace1 = []
+    trace2 = []
+    trace3 = []
+    for stock in selected_dropdown:
+        trace1.append(
+          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "Opt")]["Date"],
+                     y=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "Opt")]["Close"],
+                     mode='lines', opacity=0.7, 
+                     name=f'Actual {dropdown[stock]}',textposition='bottom center'))
+        trace2.append(
+          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "Opt")]["Date"],
+                     y=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "Opt")]["Predictions"],
+                     mode='lines', opacity=0.6,
+                     name=f'SkLearn model with Opt Prediction {dropdown[stock]}',textposition='bottom center'))
+        trace3.append(
+          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "DIY") & (df["Method"] == "Opt")]["Date"],
+                     y=df[(df["Stock"] == stock) & (df["Model"] == "DIY") & (df["Method"] == "Opt")]["Predictions"],
+                     mode='lines', opacity=0.6,
+                     name=f'DIY model with Opt Prediction {dropdown[stock]}',textposition='bottom center'))
+    traces = [trace1, trace2, trace3]
+    data = [val for sublist in traces for val in sublist]
+    figure = {'data': data,
+              'layout': go.Layout(colorway=["#5E0DAC", '#FF4F00', '#375CB1', 
+                                            '#FF7400', '#FFF400', '#FF0056'],
+            height=600,
+            title=f"Actual and Predictions Prices for {', '.join(str(dropdown[i]) for i in selected_dropdown)} Over Time",
+            xaxis={"title":"Date",
+                   'rangeselector': {'buttons': list([{'count': 1, 'label': '1 Month', 
+                                                       'step': 'month', 
+                                                       'stepmode': 'backward'},
+                                                      {'count': 6, 'label': '6 Month', 
+                                                       'step': 'month', 
+                                                       'stepmode': 'backward'},
+                                                      {'step': 'all'}])},
+                   'rangeslider': {'visible': True}, 'type': 'date'},
+             yaxis={"title":"Price (VND)"})}
+    return figure
+
+@app.callback(Output('mv-opt', 'figure'),
+              [Input('my-dropdown', 'value')])
+def update_graph(selected_dropdown):
+    dropdown = {"STB": "STB","HAG": "HAG","FB": "Facebook","MSFT": "Microsoft",}
+    trace1 = []
+    trace2 = []
+    trace3 = []
+    for stock in selected_dropdown:
+        trace1.append(
+          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "MV_Opt")]["Date"],
+                     y=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "MV_Opt")]["Close"],
+                     mode='lines', opacity=0.7, 
+                     name=f'Actual {dropdown[stock]}',textposition='bottom center'))
+        trace2.append(
+          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "MV_Opt")]["Date"],
+                     y=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "MV_Opt")]["Predictions"],
+                     mode='lines', opacity=0.6,
+                     name=f'SkLearn model with MV_Opt Prediction {dropdown[stock]}',textposition='bottom center'))
+        trace3.append(
+          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "DIY") & (df["Method"] == "MV_Opt")]["Date"],
+                     y=df[(df["Stock"] == stock) & (df["Model"] == "DIY") & (df["Method"] == "MV_Opt")]["Predictions"],
+                     mode='lines', opacity=0.6,
+                     name=f'DIY model with MV_Opt  Prediction {dropdown[stock]}',textposition='bottom center'))
+    traces = [trace1, trace2, trace3]
+    data = [val for sublist in traces for val in sublist]
+    figure = {'data': data,
+              'layout': go.Layout(colorway=["#5E0DAC", '#FF4F00', '#375CB1', 
+                                            '#FF7400', '#FFF400', '#FF0056'],
+            height=600,
+            title=f"Actual and Predictions Prices for {', '.join(str(dropdown[i]) for i in selected_dropdown)} Over Time",
+            xaxis={"title":"Date",
+                   'rangeselector': {'buttons': list([{'count': 1, 'label': '1 Month', 
+                                                       'step': 'month', 
+                                                       'stepmode': 'backward'},
+                                                      {'count': 6, 'label': '6 Month', 
+                                                       'step': 'month', 
+                                                       'stepmode': 'backward'},
+                                                      {'step': 'all'}])},
+                   'rangeslider': {'visible': True}, 'type': 'date'},
+             yaxis={"title":"Price (VND)"})}
+    return figure
  
 if __name__=='__main__':
 	app.run_server(debug=True)
