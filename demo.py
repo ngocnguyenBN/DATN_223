@@ -286,18 +286,18 @@ def update_graph(selected_dropdown):
     trace3 = []
     for stock in selected_dropdown:
         trace1.append(
-          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "None")]["Date"],
-                     y=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "None")]["Close"],
+          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "No")]["Date"],
+                     y=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "No")]["Close"],
                      mode='lines', opacity=0.7, 
                      name=f'Actual {dropdown[stock]}',textposition='bottom center'))
         trace2.append(
-          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "None")]["Date"],
-                     y=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "None")]["Predictions"],
+          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "No")]["Date"],
+                     y=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "No")]["Predictions"],
                      mode='lines', opacity=0.6,
                      name=f'SkLearn model Prediction {dropdown[stock]}',textposition='bottom center'))
         trace3.append(
-          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "DIY") & (df["Method"] == "None")]["Date"],
-                     y=df[(df["Stock"] == stock) & (df["Model"] == "DIY") & (df["Method"] == "None")]["Predictions"],
+          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "DIY") & (df["Method"] == "No")]["Date"],
+                     y=df[(df["Stock"] == stock) & (df["Model"] == "DIY") & (df["Method"] == "No")]["Predictions"],
                      mode='lines', opacity=0.6,
                      name=f'DIY model Prediction {dropdown[stock]}',textposition='bottom center'))
     traces = [trace1, trace2, trace3]
@@ -328,17 +328,17 @@ def update_graph(selected_dropdown):
     trace3 = []
     for stock in selected_dropdown:
         trace1.append(
-          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "MV")]["Date"],
-                     y=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "MV")]["Close"],
+          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "MV")]["trunc_time"],
+                     y=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "MV")]["close_price"],
                      mode='lines', opacity=0.7, 
                      name=f'Actual {dropdown[stock]}',textposition='bottom center'))
         trace2.append(
-          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "MV")]["Date"],
+          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "MV")]["trunc_time"],
                      y=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "MV")]["Predictions"],
                      mode='lines', opacity=0.6,
                      name=f'SkLearn model with MV Prediction {dropdown[stock]}',textposition='bottom center'))
         trace3.append(
-          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "DIY") & (df["Method"] == "MV")]["Date"],
+          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "DIY") & (df["Method"] == "MV")]["trunc_time"],
                      y=df[(df["Stock"] == stock) & (df["Model"] == "DIY") & (df["Method"] == "MV")]["Predictions"],
                      mode='lines', opacity=0.6,
                      name=f'DIY model with MV Prediction {dropdown[stock]}',textposition='bottom center'))
@@ -412,17 +412,17 @@ def update_graph(selected_dropdown):
     trace3 = []
     for stock in selected_dropdown:
         trace1.append(
-          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "MV_Opt")]["Date"],
-                     y=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "MV_Opt")]["Close"],
+          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "MV_Opt")]["trunc_time"],
+                     y=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "MV_Opt")]["close_price"],
                      mode='lines', opacity=0.7, 
                      name=f'Actual {dropdown[stock]}',textposition='bottom center'))
         trace2.append(
-          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "MV_Opt")]["Date"],
+          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "MV_Opt")]["trunc_time"],
                      y=df[(df["Stock"] == stock) & (df["Model"] == "SkLearn") & (df["Method"] == "MV_Opt")]["Predictions"],
                      mode='lines', opacity=0.6,
                      name=f'SkLearn model with MV_Opt Prediction {dropdown[stock]}',textposition='bottom center'))
         trace3.append(
-          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "DIY") & (df["Method"] == "MV_Opt")]["Date"],
+          go.Scatter(x=df[(df["Stock"] == stock) & (df["Model"] == "DIY") & (df["Method"] == "MV_Opt")]["trunc_time"],
                      y=df[(df["Stock"] == stock) & (df["Model"] == "DIY") & (df["Method"] == "MV_Opt")]["Predictions"],
                      mode='lines', opacity=0.6,
                      name=f'DIY model with MV_Opt  Prediction {dropdown[stock]}',textposition='bottom center'))
