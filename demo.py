@@ -51,11 +51,11 @@ app.layout = html.Div([
    
     dcc.Tabs(id="tabs", children=[
        
-        dcc.Tab(label='NSE-TATAGLOBAL Stock Data',children=[
+        dcc.Tab(label='Stock Data',children=[
             dcc.Graph(id='running')
         ]),
 
-        dcc.Tab(label='Old Prediction Stock Data', children=[
+        dcc.Tab(label='Prediction Stock Data', children=[
             html.Div([
                 html.H1("Stocks Actual vs Predictions by only RF", 
                         style={'textAlign': 'center'}),
