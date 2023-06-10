@@ -6,9 +6,7 @@ import plotly.graph_objs as go
 from dash.dependencies import Input, Output
 from keras.models import load_model
 from sklearn.preprocessing import MinMaxScaler
-import numpy as np
  
-import pandas as pd
 import numpy as np
  
 import matplotlib.pyplot as plt
@@ -124,106 +122,178 @@ def update_graph(selected_dropdown):
     print("X_test: ", X_test.shape)
     print("y_test", y_test.shape)
 
-    from sklearn.model_selection import KFold
-    import time
-    import psutil
+    from joblib import Parallel, delayed
 
-    # cross validation
-    # evaluate performance of model, can be used to be the target function in optuna
-    # ref: from sklearn.model_selection import cross_val_score
-    def cross_val_score(estimator, X, y, cv=5, scoring=None):
-        scores = []
-        
-        # scoring: target function, if not provided it will be r2
-        if scoring is None:
-            scoring = r2_score
-        
-        cv_splitter = KFold(n_splits=cv, shuffle=True)
-        
-        for train_indices, test_indices in cv_splitter.split(X):
-            X_train, X_test = X[train_indices], X[test_indices]
-            y_train, y_test = y[train_indices], y[test_indices]
+    class RandomForestRegressor:
+        def __init__(self, n_estimators=10, max_depth=None, min_samples_split=2, min_samples_leaf=1, max_features=None, subsample_ratio=0.8, n_jobs=-1, random_state=42):
+            self.n_estimators = n_estimators
+            self.max_depth = max_depth
+            self.min_samples_split = min_samples_split
+            self.min_samples_leaf = min_samples_leaf
+            self.max_features = max_features
+            self.subsample_ratio = subsample_ratio
+            self.trees = []
+            self.feature_importances_ = None
+            self.n_jobs = n_jobs
+            self.random_state = random_state
             
-            estimator.fit(X_train, y_train)
-            y_pred = estimator.predict(X_test)
+        def fit(self, X, y):
+            n_samples = len(X)
+            n_subsample = int(self.subsample_ratio * n_samples)
+            self.feature_importances_ = np.zeros(X.shape[1])
             
-            score = scoring(y_test, y_pred)
-            scores.append(score)
+            def fit_tree(i):
+                subsample_indices, oob_indices = self._bootstrap_sampling(n_samples, n_subsample)  # Apply bootstrap sampling
+                subsample_X = X[subsample_indices]
+                subsample_y = y[subsample_indices]
+                
+                if self.random_state is not None:
+                    np.random.seed(self.random_state + i)  # Set random seed for each tree
+                    
+                tree = DecisionTreeRegressor(max_depth=self.max_depth, min_samples_split=self.min_samples_split, 
+                                            min_samples_leaf=self.min_samples_leaf, max_features=self.max_features, random_state=self.random_state)
+                tree.fit(subsample_X, subsample_y)
+                
+                return tree, subsample_indices
+            
+            results = Parallel(n_jobs=self.n_jobs)(delayed(fit_tree)(i) for i in range(self.n_estimators))
+            
+            self.trees = [result[0] for result in results]
+            self.feature_importances_ = np.sum([tree.feature_importances_ for tree, _ in results], axis=0)
+            
+        def predict(self, X):
+            return np.mean([tree.predict(X) for tree in self.trees], axis=0)
         
-        return np.mean(scores) # return average score of `cv` times run
+        def _bootstrap_sampling(self, n_samples, n_subsample):
+            subsample_indices = np.random.choice(n_samples, size=n_subsample, replace=True)  # Subsampling with Replacement
+            oob_indices = np.array(list(set(range(n_samples)) - set(subsample_indices)))  # Out-of-Bag indices
+            return subsample_indices, oob_indices
 
 
-    def r2_score(y_true, y_pred):
-        numerator = np.sum((y_true - y_pred) ** 2)
-        denominator = np.sum((y_true - np.mean(y_true)) ** 2)
-        r2 = 1 - (numerator / denominator)
-        return r2
+    class DecisionTreeRegressor:
+        def __init__(
+            self, max_depth=None, min_samples_split=2, min_samples_leaf=1, max_features=None, random_state=None
+        ):
+            self.max_depth = max_depth
+            self.min_samples_split = min_samples_split
+            self.min_samples_leaf = min_samples_leaf
+            self.max_features = max_features
+            self.tree = None
+            self.feature_importances_ = None
+            self.random_state = random_state
 
-    def measure_system_metrics():
-        cpu_percent = psutil.cpu_percent()
-        memory_usage = psutil.virtual_memory().percent
-        disk_usage = psutil.disk_usage('/').percent
-        network_io = psutil.net_io_counters()
+        def fit(self, X, y):
+            if self.random_state is not None:
+                np.random.seed(self.random_state)
+                
+            self.tree = self._build_tree(X, y)
+            self.feature_importances_ = self._calculate_feature_importances(X)
+            
+        def predict(self, X):
+            return np.array([self._traverse_tree(x, self.tree) for x in X])
         
-        return cpu_percent, memory_usage, disk_usage, network_io
+        def _build_tree(self, X, y, depth=0):
+            node = Node()
+            
+            if depth == self.max_depth or len(X) < self.min_samples_split or len(np.unique(y)) == 1:
+                node.is_leaf = True
+                node.prediction = np.mean(y)
+                return node
+            
+            split_feature, split_value = self._find_best_split(X, y)
+            
+            if split_feature is None:
+                node.is_leaf = True
+                node.prediction = np.mean(y)
+                return node
+            
+            left_indices = X[:, split_feature] <= split_value
+            right_indices = X[:, split_feature] > split_value
 
-    from sklearn.metrics import mean_squared_error
-    import optuna
+            node.split_feature = split_feature
+            node.split_value = split_value
 
-    # Define the objective function for Optuna
-    def objective(trial):
-        n_estimators = trial.suggest_int('n_estimators', 100, 1000)
-        max_depth = trial.suggest_int('max_depth', 5, 30)
-        min_samples_split = trial.suggest_int('min_samples_split', 2, 10)
-        min_samples_leaf = trial.suggest_int('min_samples_leaf', 1, 10)
-        max_features = trial.suggest_int("max_features", 1, X_train.shape[1])
+            node.left = self._build_tree(X[left_indices], y[left_indices], depth + 1)
+            node.right = self._build_tree(X[right_indices], y[right_indices], depth + 1)
+
+            return node
+        
+        def _find_best_split(self, X, y):
+            best_score = float('inf')
+            best_split_feature = None
+            best_split_value = None
+            
+            n_features = X.shape[1]
+            if self.max_features is not None and self.max_features < n_features:
+                feature_indices = np.random.choice(n_features, size=self.max_features, replace=False)
+            else:
+                feature_indices = np.arange(n_features)
+            
+            for feature in feature_indices:
+                unique_values = np.unique(X[:, feature])
+                split_values = (unique_values[:-1] + unique_values[1:]) / 2.0
+                
+                for value in split_values:
+                    left_indices = X[:, feature] <= value
+                    right_indices = X[:, feature] > value
+                    score = self._calculate_split_score(y, left_indices, right_indices)
+                    
+                    if score < best_score:
+                        best_score = score
+                        best_split_feature = feature
+                        best_split_value = value
+            
+            return best_split_feature, best_split_value
+        
+        def _calculate_split_score(self, y, left_indices, right_indices):
+            left_y = y[left_indices]
+            right_y = y[right_indices]
+            
+            left_score = self._calculate_variance(left_y)
+            right_score = self._calculate_variance(right_y)
+            
+            n_left = len(left_y)
+            n_right = len(right_y)
+            total_samples = n_left + n_right
+            
+            split_score = (n_left / total_samples) * left_score + (n_right / total_samples) * right_score
+            return split_score
+        
+        def _calculate_variance(self, y):
+            if len(y) == 0:
+                return 0.0
+            mean = np.mean(y)
+            variance = np.mean((y - mean) ** 2)
+            return variance
+        
+        def _traverse_tree(self, x, node):
+            if node.is_leaf:
+                return node.prediction
+            else:
+                if x[node.split_feature] <= node.split_value:
+                    return self._traverse_tree(x, node.left)
+                else:
+                    return self._traverse_tree(x, node.right)
+                
+        def _calculate_feature_importances(self, X):
+            feature_importances = np.zeros(X.shape[1])  # Adjust the shape of feature_importances array
+            # Calculate feature importances based on tree structure, node splits, or other criteria
+            # Assign importance values to each feature
+            return feature_importances
 
 
-        model = RandomForestRegressor(
-            n_estimators=n_estimators,
-            max_depth=max_depth,
-            min_samples_split=min_samples_split,
-            min_samples_leaf=min_samples_leaf,
-            max_features=max_features,
-        )
+    class Node:
+        def __init__(self):
+            self.is_leaf = False
+            self.prediction = None
+            self.split_feature = None
+            self.split_value = None
+            self.left = None
+            self.right = None
 
-        scores = cross_val_score(model, X_train, y_train, cv=5)
-
-        return scores
-
-    # Use Optuna to optimize hyperparameters
-    study = optuna.create_study(direction='maximize', sampler=optuna.samplers.TPESampler())
-    study.optimize(objective, n_trials=1)
-    best_params = study.best_params
-
-    rf = RandomForestRegressor(**best_params)
-
-    start_time = time.time()
-    cpu_percent, memory_usage, disk_usage, network_io = measure_system_metrics()
-
-    print(f"CPU usage: {cpu_percent}%")
-    print(f"Memory usage: {memory_usage}%")
-    print(f"Disk usage: {disk_usage}%")
-    print(f"Network I/O: {network_io}")
-
-    scores = cross_val_score(rf, X_train, y_train, cv=5)
-    print("Cross-validated my model r2:", scores)
-    end_time = time.time()
-
-    # Measure system metrics after code execution
-    cpu_percent, memory_usage, disk_usage, network_io = measure_system_metrics()
-
-    execution_time = end_time - start_time
-
-    print(f"Execution time: {execution_time} seconds")
-    print(f"CPU usage: {cpu_percent}%")
-    print(f"Memory usage: {memory_usage}%")
-    print(f"Disk usage: {disk_usage}%")
-    print(f"Network I/O: {network_io}")
-
+    rf = RandomForestRegressor(max_depth=26, min_samples_leaf=2, min_samples_split=10,n_estimators=160, max_features=3) # subsample_ratio: % split to subsampling, can be used to be the hyperparameter in optuna
     rf.fit(X_train, y_train)
 
-    # Lets Do the prediction 
 
     RF_train_predict=rf.predict(X_train)
     RF_test_predict=rf.predict(X_test)
