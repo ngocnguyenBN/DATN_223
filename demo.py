@@ -62,9 +62,7 @@ app.layout = html.Div([
               
                 dcc.Dropdown(id='my-dropdown',
                              options=[{'label': 'STB', 'value': 'STB'},
-                                      {'label': 'HAG','value': 'HAG'}, 
-                                      {'label': 'Facebook', 'value': 'FB'}, 
-                                      {'label': 'Microsoft','value': 'MSFT'}], 
+                                      {'label': 'HAG','value': 'HAG'}], 
                              multi=True,value=['STB'],
                              style={"display": "block", "margin-left": "auto", 
                                     "margin-right": "auto", "width": "60%"}),
@@ -280,7 +278,7 @@ def update_graph(selected_dropdown):
 @app.callback(Output('none', 'figure'),
               [Input('my-dropdown', 'value')])
 def update_graph(selected_dropdown):
-    dropdown = {"STB": "STB","HAG": "HAG","FB": "Facebook","MSFT": "Microsoft",}
+    dropdown = {"STB": "STB","HAG": "HAG"}
     trace1 = []
     trace2 = []
     trace3 = []
@@ -303,7 +301,7 @@ def update_graph(selected_dropdown):
     traces = [trace1, trace2, trace3]
     data = [val for sublist in traces for val in sublist]
     figure = {'data': data,
-              'layout': go.Layout(colorway=["#5E0DAC", '#FF4F00', '#375CB1', 
+              'layout': go.Layout(colorway=["#2dcde8", '#00cc96', '#ef553b', 
                                             '#FF7400', '#FFF400', '#FF0056'],
             height=600,
             title=f"Actual and Predictions Prices for {', '.join(str(dropdown[i]) for i in selected_dropdown)} Over Time",
@@ -322,7 +320,7 @@ def update_graph(selected_dropdown):
 @app.callback(Output('mv', 'figure'),
               [Input('my-dropdown', 'value')])
 def update_graph(selected_dropdown):
-    dropdown = {"STB": "STB","HAG": "HAG","FB": "Facebook","MSFT": "Microsoft",}
+    dropdown = {"STB": "STB","HAG": "HAG"}
     trace1 = []
     trace2 = []
     trace3 = []
@@ -345,7 +343,7 @@ def update_graph(selected_dropdown):
     traces = [trace1, trace2, trace3]
     data = [val for sublist in traces for val in sublist]
     figure = {'data': data,
-              'layout': go.Layout(colorway=["#5E0DAC", '#FF4F00', '#375CB1', 
+              'layout': go.Layout(colorway=["#2dcde8", '#00cc96', '#ef553b', 
                                             '#FF7400', '#FFF400', '#FF0056'],
             height=600,
             title=f"Actual and Predictions Prices for {', '.join(str(dropdown[i]) for i in selected_dropdown)} Over Time",
@@ -364,7 +362,7 @@ def update_graph(selected_dropdown):
 @app.callback(Output('opt', 'figure'),
               [Input('my-dropdown', 'value')])
 def update_graph(selected_dropdown):
-    dropdown = {"STB": "STB","HAG": "HAG","FB": "Facebook","MSFT": "Microsoft",}
+    dropdown = {"STB": "STB","HAG": "HAG"}
     trace1 = []
     trace2 = []
     trace3 = []
@@ -387,7 +385,7 @@ def update_graph(selected_dropdown):
     traces = [trace1, trace2, trace3]
     data = [val for sublist in traces for val in sublist]
     figure = {'data': data,
-              'layout': go.Layout(colorway=["#5E0DAC", '#FF4F00', '#375CB1', 
+              'layout': go.Layout(colorway=["#2dcde8", '#00cc96', '#ef553b', 
                                             '#FF7400', '#FFF400', '#FF0056'],
             height=600,
             title=f"Actual and Predictions Prices for {', '.join(str(dropdown[i]) for i in selected_dropdown)} Over Time",
@@ -406,7 +404,7 @@ def update_graph(selected_dropdown):
 @app.callback(Output('mv-opt', 'figure'),
               [Input('my-dropdown', 'value')])
 def update_graph(selected_dropdown):
-    dropdown = {"STB": "STB","HAG": "HAG","FB": "Facebook","MSFT": "Microsoft",}
+    dropdown = {"STB": "STB","HAG": "HAG"}
     trace1 = []
     trace2 = []
     trace3 = []
@@ -429,7 +427,7 @@ def update_graph(selected_dropdown):
     traces = [trace1, trace2, trace3]
     data = [val for sublist in traces for val in sublist]
     figure = {'data': data,
-              'layout': go.Layout(colorway=["#5E0DAC", '#FF4F00', '#375CB1', 
+              'layout': go.Layout(colorway=["#2dcde8", '#00cc96', '#ef553b', 
                                             '#FF7400', '#FFF400', '#FF0056'],
             height=600,
             title=f"Actual and Predictions Prices for {', '.join(str(dropdown[i]) for i in selected_dropdown)} Over Time",
