@@ -11,6 +11,14 @@ import numpy as np
  
 import matplotlib.pyplot as plt
  
+import time
+import psutil
+from multiprocessing import Process, Manager
+from joblib import Parallel, delayed
+import math
+
+from sklearn.metrics import mean_squared_error, mean_absolute_error, explained_variance_score, r2_score 
+
 from matplotlib.pylab import rcParams
 rcParams['figure.figsize']=20,10
  
@@ -50,7 +58,25 @@ app.layout = html.Div([
     dcc.Tabs(id="tabs", children=[
        
         dcc.Tab(label='Stock Data',children=[
-            dcc.Graph(id='running')
+            html.H1("Random Forest Model Comparison"),
+            html.Label("Number of Estimators:"),
+            dcc.Input(id='n_estimators', type='number', value=160),
+            html.Br(),
+            html.Label("Number of Max Depth:"),
+            dcc.Input(id='max_depth', type='number', value=26),
+            html.Br(),
+            html.Label("Number of Min Sample Leaf:"),
+            dcc.Input(id='min_samples_leaf', type='number', value=2),
+            html.Br(),
+            html.Label("Number of Min Sample Split:"),
+            dcc.Input(id='min_samples_split', type='number', value=10),
+            html.Br(),
+            html.Label("Number of Max Feature:"),
+            dcc.Input(id='max_features', type='number', value=3),
+            html.Br(),
+            html.Button('Run Models', id='button'),
+            html.Hr(),
+            html.Div(id='output-container')
         ]),
 
         dcc.Tab(label='Prediction Stock Data', children=[
@@ -77,54 +103,70 @@ app.layout = html.Div([
 ])
  
  
- 
-@app.callback(Output('running', 'figure'),
-              [Input('my-dropdown', 'value')])
-def update_graph(selected_dropdown):
-    data = pd.read_csv("./Dataset/STB.csv")
-    data.rename(columns={"trunc_time":"Date","open_price":"open","high_price":"high","low_price":"low","close_price":"Close"}, inplace= True)
+data = pd.read_csv("./Dataset/STB.csv")
+data.rename(columns={"trunc_time":"Date","open_price":"open","high_price":"high","low_price":"low","close_price":"Close"}, inplace= True)
 
-    from sklearn.preprocessing import MinMaxScaler
-    closedf = data[['Date','Close']]
-    print(closedf)
-    print("Shape of close dataframe:", closedf.shape)
-    close_stock = closedf.copy()
-    del closedf['Date']
-    scaler=MinMaxScaler(feature_range=(0,1))
-    closedf=scaler.fit_transform(np.array(closedf).reshape(-1,1))
-    print(closedf.shape)
-    time_step = 20
+from sklearn.preprocessing import MinMaxScaler
+closedf = data[['Date','Close']]
+close_stock = closedf.copy()
+del closedf['Date']
+scaler=MinMaxScaler(feature_range=(0,1))
+closedf=scaler.fit_transform(np.array(closedf).reshape(-1,1))
+time_step = 20
 
-    training_size=int(len(closedf)*0.8)
-    test_size=len(closedf)-training_size
-    train_data,test_data=closedf[0:training_size,:],closedf[training_size:len(closedf),:1]
-    print("train_data: ", train_data.shape)
-    print("test_data: ", test_data.shape)
-    train_data
+training_size=int(len(closedf)*0.8)
+test_size=len(closedf)-training_size
+train_data,test_data=closedf[0:training_size,:],closedf[training_size:len(closedf),:1]
 
-    # convert an array of values into a dataset matrix
-    def create_dataset(dataset, time_step=1):
-        dataX, dataY = [], []
-        for i in range(len(dataset)-time_step-1):
-            a = dataset[i:(i+time_step), 0]   ###i=0, 0,1,2,3-----99   100 
-            dataX.append(a)
-            dataY.append(dataset[i + time_step, 0])
-        return np.array(dataX), np.array(dataY)
+# convert an array of values into a dataset matrix
+def create_dataset(dataset, time_step=1):
+    dataX, dataY = [], []
+    for i in range(len(dataset)-time_step-1):
+        a = dataset[i:(i+time_step), 0]   ###i=0, 0,1,2,3-----99   100 
+        dataX.append(a)
+        dataY.append(dataset[i + time_step, 0])
+    return np.array(dataX), np.array(dataY)
 
 
-    # reshape into X=t,t+1,t+2,t+3 and Y=t+4
-    time_step = 10
-    X_train, y_train = create_dataset(train_data, time_step)
-    X_test, y_test = create_dataset(test_data, time_step)
-    print(test_data.shape)
-    print("X_train: ", X_train.shape)
-    print("y_train: ", y_train.shape)
-    print("X_test: ", X_test.shape)
-    print("y_test", y_test.shape)
+# reshape into X=t,t+1,t+2,t+3 and Y=t+4
+time_step = 10
+X_train, y_train = create_dataset(train_data, time_step)
+X_test, y_test = create_dataset(test_data, time_step)
 
-    from joblib import Parallel, delayed
 
-    class RandomForestRegressor:
+# Function to run a Random Forest model
+def run_sk(max_depth, min_samples_leaf, min_samples_split,n_estimators, max_features):
+    start_time = time.time()
+    model = RandomForestRegressor(max_depth=max_depth, min_samples_leaf=min_samples_leaf, min_samples_split=min_samples_split,n_estimators=n_estimators, max_features=max_features)
+    model.fit(X_train, y_train)
+    execution_time = time.time() - start_time
+    ram_usage = psutil.Process().memory_info().rss / 1024 ** 2  # RAM usage in MB
+
+    # Predict on the test set
+    RF_train_predict=model.predict(X_train)
+    RF_test_predict=model.predict(X_test)
+
+    RF_train_predict = RF_train_predict.reshape(-1,1)
+    RF_test_predict = RF_test_predict.reshape(-1,1)
+
+    RF_train_predict = scaler.inverse_transform(RF_train_predict)
+    RF_test_predict = scaler.inverse_transform(RF_test_predict)
+
+    RF_original_ytest = scaler.inverse_transform(y_test.reshape(-1,1)) 
+
+    RF_RMSE_test = math.sqrt(mean_squared_error(RF_original_ytest,RF_test_predict))
+    RF_r2_test = r2_score(RF_original_ytest, RF_test_predict)
+
+    look_back=time_step
+    testPredictPlot = np.empty_like(closedf)
+    testPredictPlot[:, :] = np.nan
+    testPredictPlot[len(RF_train_predict)+(look_back*2)+1:len(closedf)-1, :] = RF_test_predict
+    close_stock['Predictions']=testPredictPlot
+
+    return (close_stock, execution_time, ram_usage, RF_r2_test, RF_RMSE_test, 1)
+
+def run_diy(max_depth, min_samples_leaf, min_samples_split,n_estimators, max_features):
+    class DIYRandomForestRegressor:
         def __init__(self, n_estimators=10, max_depth=None, min_samples_split=2, min_samples_leaf=1, max_features=None, subsample_ratio=0.8, n_jobs=-1, random_state=42):
             self.n_estimators = n_estimators
             self.max_depth = max_depth
@@ -150,7 +192,7 @@ def update_graph(selected_dropdown):
                 if self.random_state is not None:
                     np.random.seed(self.random_state + i)  # Set random seed for each tree
                     
-                tree = DecisionTreeRegressor(max_depth=self.max_depth, min_samples_split=self.min_samples_split, 
+                tree = DIYDecisionTreeRegressor(max_depth=self.max_depth, min_samples_split=self.min_samples_split, 
                                             min_samples_leaf=self.min_samples_leaf, max_features=self.max_features, random_state=self.random_state)
                 tree.fit(subsample_X, subsample_y)
                 
@@ -170,7 +212,7 @@ def update_graph(selected_dropdown):
             return subsample_indices, oob_indices
 
 
-    class DecisionTreeRegressor:
+    class DIYDecisionTreeRegressor:
         def __init__(
             self, max_depth=None, min_samples_split=2, min_samples_leaf=1, max_features=None, random_state=None
         ):
@@ -291,57 +333,167 @@ def update_graph(selected_dropdown):
             self.left = None
             self.right = None
 
-    rf = RandomForestRegressor(max_depth=26, min_samples_leaf=2, min_samples_split=10,n_estimators=160, max_features=3) # subsample_ratio: % split to subsampling, can be used to be the hyperparameter in optuna
-    rf.fit(X_train, y_train)
 
+    start_time = time.time()
+    model = DIYRandomForestRegressor(max_depth=max_depth, min_samples_leaf=min_samples_leaf, min_samples_split=min_samples_split,n_estimators=n_estimators, max_features=max_features)
+    model.fit(X_train, y_train)
+    execution_time = time.time() - start_time
+    ram_usage = psutil.Process().memory_info().rss / 1024 ** 2  # RAM usage in MB
 
-    RF_train_predict=rf.predict(X_train)
-    RF_test_predict=rf.predict(X_test)
-    # print("Train data prediction:", train_predict)
-    # # print("Test data prediction:", test_predict)
+    # Predict on the test set
+    RF_train_predict=model.predict(X_train)
+    RF_test_predict=model.predict(X_test)
+
     RF_train_predict = RF_train_predict.reshape(-1,1)
     RF_test_predict = RF_test_predict.reshape(-1,1)
 
     RF_train_predict = scaler.inverse_transform(RF_train_predict)
     RF_test_predict = scaler.inverse_transform(RF_test_predict)
 
+    RF_original_ytest = scaler.inverse_transform(y_test.reshape(-1,1)) 
+
+    RF_RMSE_test = math.sqrt(mean_squared_error(RF_original_ytest,RF_test_predict))
+    RF_r2_test = r2_score(RF_original_ytest, RF_test_predict)
+
     look_back=time_step
     testPredictPlot = np.empty_like(closedf)
     testPredictPlot[:, :] = np.nan
     testPredictPlot[len(RF_train_predict)+(look_back*2)+1:len(closedf)-1, :] = RF_test_predict
-    close_stock['Predictions']=testPredictPlot
-    print(close_stock['Close'])
-    print(close_stock['Predictions'])
-    trace1 = []
-    trace2 = []
-    trace1.append(
-        go.Scatter(x=close_stock['Date'],
-                    y=close_stock['Close'],
-                    mode='lines', opacity=0.7, 
-                    name=f'Actual STB',textposition='bottom center'))
-    trace2.append(
-        go.Scatter(x=close_stock['Date'],
-                    y=close_stock['Predictions'],
-                    mode='lines', opacity=0.6,
-                    name=f'Prediction STB',textposition='bottom center'))
-    traces = [trace1, trace2]
-    data = [val for sublist in traces for val in sublist]
-    figure = {'data': data,
-              'layout': go.Layout(colorway=["#5E0DAC", '#FF4F00', '#375CB1', 
+    close_stock['Predictions_DIY']=testPredictPlot
+    return (close_stock, execution_time, ram_usage, RF_r2_test, RF_RMSE_test, 2)
+
+# Callback to run the models and display the results
+@app.callback(Output('output-container', 'children'),
+              [Input('button', 'n_clicks')],
+              [dash.dependencies.State('max_depth', 'value'),
+               dash.dependencies.State('min_samples_leaf', 'value'),
+               dash.dependencies.State('min_samples_split', 'value'),
+               dash.dependencies.State('n_estimators', 'value'),
+               dash.dependencies.State('max_features', 'value')])
+def run_models(n_clicks, max_depth, min_samples_leaf, min_samples_split,n_estimators, max_features):
+    if n_clicks:
+        model_diy, exec_time_diy, ram_usage_diy, accuracy_diy, rmse_diy, _ = run_diy(max_depth, min_samples_leaf, min_samples_split,n_estimators, max_features)
+        model_sk, exec_time_sk, ram_usage_sk, accuracy_sk, rmse_sk, _ = run_sk(max_depth, min_samples_leaf, min_samples_split,n_estimators, max_features)
+
+        trace1_sk = []
+        trace2_sk = []
+        trace1_sk.append(
+            go.Scatter(x=model_sk['Date'],
+                        y=model_sk['Close'],
+                        mode='lines', opacity=0.7, 
+                        name=f'Actual STB',textposition='bottom center'))
+        trace2_sk.append(
+            go.Scatter(x=model_sk['Date'],
+                        y=model_sk['Predictions'],
+                        mode='lines', opacity=0.6,
+                        name=f'Prediction STB',textposition='bottom center'))
+        traces_sk = [trace1_sk, trace2_sk]
+        traces_sk = [val for sublist in traces_sk for val in sublist]
+        print("model_sk", model_diy)
+        print("model_diy", model_diy)
+        trace1_diy = []
+        trace2_diy = []
+        trace1_diy.append(
+            go.Scatter(x=model_diy['Date'],
+                        y=model_diy['Close'],
+                        mode='lines', opacity=0.7, 
+                        name=f'Actual STB',textposition='bottom center'))
+        trace2_diy.append(
+            go.Scatter(x=model_diy['Date'],
+                        y=model_diy['Predictions_DIY'],
+                        mode='lines', opacity=0.6,
+                        name=f'Prediction STB',textposition='bottom center'))
+        traces_diy = [trace1_diy, trace2_diy]
+        traces_diy = [val for sublist in traces_diy for val in sublist]
+
+        trace1_total = []
+        trace2_total = []
+        trace3_total = []
+        trace1_total.append(
+            go.Scatter(x=model_sk['Date'],
+                        y=model_sk['Close'],
+                        mode='lines', opacity=0.7, 
+                        name=f'Actual STB',textposition='bottom center'))
+        trace2_total.append(
+            go.Scatter(x=model_sk['Date'],
+                        y=model_sk['Predictions'],
+                        mode='lines', opacity=0.6,
+                        name=f'SK RF Prediction STB',textposition='bottom center'))         
+        trace3_total.append(
+                    go.Scatter(x=model_diy['Date'],
+                                y=model_diy['Predictions_DIY'],
+                                mode='lines', opacity=0.6,
+                                name=f'DIY RF Prediction STB',textposition='bottom center'))
+        traces_total = [trace1_total, trace2_total, trace3_total]
+        traces_total = [val for sublist in traces_total for val in sublist]
+        model_sk_output = html.Div([
+            dcc.Graph(id='scatter-plot', figure={'data': traces_sk,
+                'layout': go.Layout(colorway=["#2dcde8", '#00cc96', '#ef553b', 
                                             '#FF7400', '#FFF400', '#FF0056'],
-            height=600,
-            title=f"High and Low Prices for  Over Time",
-            xaxis={"title":"Date",
-                   'rangeselector': {'buttons': list([{'count': 1, 'label': '1M', 
-                                                       'step': 'month', 
-                                                       'stepmode': 'backward'},
-                                                      {'count': 6, 'label': '6M', 
-                                                       'step': 'month', 
-                                                       'stepmode': 'backward'},
-                                                      {'step': 'all'}])},
-                   'rangeslider': {'visible': True}, 'type': 'date'},
-             yaxis={"title":"Price (USD)"})}
-    return figure
+                height=600,
+                title=f"Scikit Learn Random Forest",
+                xaxis={"title":"Date",
+                    'rangeselector': {'buttons': list([{'count': 1, 'label': '1M', 
+                                                        'step': 'month', 
+                                                        'stepmode': 'backward'},
+                                                        {'count': 6, 'label': '6M', 
+                                                        'step': 'month', 
+                                                        'stepmode': 'backward'},
+                                                        {'step': 'all'}])},
+                    'rangeslider': {'visible': True}, 'type': 'date'},
+                yaxis={"title":"Price (USD)"})}
+            ),
+            html.P(f"Execution Time: {exec_time_sk:.2f} seconds"),
+            html.P(f"RAM Usage: {ram_usage_sk:.2f} MB"),
+            html.P(f"R2 Score: {accuracy_sk:.2f}"),
+            html.P(f"RSME: {rmse_sk:.2f}"),
+            html.Hr()
+        ])
+
+        model_diy_output = html.Div([
+            dcc.Graph(id='scatter-plot', figure={'data': traces_diy,
+                'layout': go.Layout(colorway=["#2dcde8", '#00cc96', '#ef553b', 
+                                            '#FF7400', '#FFF400', '#FF0056'],
+                height=600,
+                title=f"DIY Random Forest",
+                xaxis={"title":"Date",
+                    'rangeselector': {'buttons': list([{'count': 1, 'label': '1M', 
+                                                        'step': 'month', 
+                                                        'stepmode': 'backward'},
+                                                        {'count': 6, 'label': '6M', 
+                                                        'step': 'month', 
+                                                        'stepmode': 'backward'},
+                                                        {'step': 'all'}])},
+                    'rangeslider': {'visible': True}, 'type': 'date'},
+                yaxis={"title":"Price (USD)"})}
+            ),
+            html.P(f"Execution Time: {exec_time_diy:.2f} seconds"),
+            html.P(f"RAM Usage: {ram_usage_diy:.2f} MB"),
+            html.P(f"R2 Score: {accuracy_diy:.2f}"),
+            html.P(f"RSME: {rmse_diy:.2f}"),
+            html.Hr()
+        ])
+
+        model_total_output = html.Div([
+            dcc.Graph(id='scatter-plot', figure={'data': traces_total,
+                'layout': go.Layout(colorway=["#2dcde8", '#00cc96', '#ef553b', 
+                                            '#FF7400', '#FFF400', '#FF0056'],
+                height=600,
+                title=f"Comparison of 2 models",
+                xaxis={"title":"Date",
+                    'rangeselector': {'buttons': list([{'count': 1, 'label': '1M', 
+                                                        'step': 'month', 
+                                                        'stepmode': 'backward'},
+                                                        {'count': 6, 'label': '6M', 
+                                                        'step': 'month', 
+                                                        'stepmode': 'backward'},
+                                                        {'step': 'all'}])},
+                    'rangeslider': {'visible': True}, 'type': 'date'},
+                yaxis={"title":"Price (USD)"})}
+            )
+        ])
+
+        return html.Div([model_sk_output, model_diy_output, model_total_output])
  
  
  
