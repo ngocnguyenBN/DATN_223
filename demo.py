@@ -74,6 +74,9 @@ app.layout = html.Div([
             html.Label("Number of Max Feature:"),
             dcc.Input(id='max_features', type='number', value=3),
             html.Br(),
+            html.Label("Training Size:"),
+            dcc.Input(id='training_size', type='number', value=75),
+            html.Br(),
             html.Button('Run Models', id='button'),
             html.Hr(),
             html.Div(id='output-container')
@@ -102,7 +105,7 @@ app.layout = html.Div([
     ])
 ])
  
- 
+
 data = pd.read_csv("./Dataset/STB.csv")
 data.rename(columns={"trunc_time":"Date","open_price":"open","high_price":"high","low_price":"low","close_price":"Close"}, inplace= True)
 
@@ -114,28 +117,28 @@ scaler=MinMaxScaler(feature_range=(0,1))
 closedf=scaler.fit_transform(np.array(closedf).reshape(-1,1))
 time_step = 20
 
-training_size=int(len(closedf)*0.8)
-test_size=len(closedf)-training_size
-train_data,test_data=closedf[0:training_size,:],closedf[training_size:len(closedf),:1]
-
-# convert an array of values into a dataset matrix
-def create_dataset(dataset, time_step=1):
-    dataX, dataY = [], []
-    for i in range(len(dataset)-time_step-1):
-        a = dataset[i:(i+time_step), 0]   ###i=0, 0,1,2,3-----99   100 
-        dataX.append(a)
-        dataY.append(dataset[i + time_step, 0])
-    return np.array(dataX), np.array(dataY)
-
-
-# reshape into X=t,t+1,t+2,t+3 and Y=t+4
-time_step = 10
-X_train, y_train = create_dataset(train_data, time_step)
-X_test, y_test = create_dataset(test_data, time_step)
-
 
 # Function to run a Random Forest model
-def run_sk(max_depth, min_samples_leaf, min_samples_split,n_estimators, max_features):
+def run_sk(max_depth, min_samples_leaf, min_samples_split,n_estimators, max_features, _training_size):
+    training_size=int(len(closedf) * _training_size / 100)
+    test_size=len(closedf)-training_size
+    train_data,test_data=closedf[0:training_size,:],closedf[training_size:len(closedf),:1]
+
+    # convert an array of values into a dataset matrix
+    def create_dataset(dataset, time_step=1):
+        dataX, dataY = [], []
+        for i in range(len(dataset)-time_step-1):
+            a = dataset[i:(i+time_step), 0]   ###i=0, 0,1,2,3-----99   100 
+            dataX.append(a)
+            dataY.append(dataset[i + time_step, 0])
+        return np.array(dataX), np.array(dataY)
+
+
+    # reshape into X=t,t+1,t+2,t+3 and Y=t+4
+    time_step = 10
+    X_train, y_train = create_dataset(train_data, time_step)
+    X_test, y_test = create_dataset(test_data, time_step)
+
     start_time = time.time()
     model = RandomForestRegressor(max_depth=max_depth, min_samples_leaf=min_samples_leaf, min_samples_split=min_samples_split,n_estimators=n_estimators, max_features=max_features)
     model.fit(X_train, y_train)
@@ -165,7 +168,25 @@ def run_sk(max_depth, min_samples_leaf, min_samples_split,n_estimators, max_feat
 
     return (close_stock, execution_time, ram_usage, RF_r2_test, RF_RMSE_test, 1)
 
-def run_diy(max_depth, min_samples_leaf, min_samples_split,n_estimators, max_features):
+def run_diy(max_depth, min_samples_leaf, min_samples_split,n_estimators, max_features, _training_size):
+    training_size=int(len(closedf) * _training_size / 100)
+    test_size=len(closedf)-training_size
+    train_data,test_data=closedf[0:training_size,:],closedf[training_size:len(closedf),:1]
+
+    # convert an array of values into a dataset matrix
+    def create_dataset(dataset, time_step=1):
+        dataX, dataY = [], []
+        for i in range(len(dataset)-time_step-1):
+            a = dataset[i:(i+time_step), 0]   ###i=0, 0,1,2,3-----99   100 
+            dataX.append(a)
+            dataY.append(dataset[i + time_step, 0])
+        return np.array(dataX), np.array(dataY)
+
+
+    # reshape into X=t,t+1,t+2,t+3 and Y=t+4
+    time_step = 10
+    X_train, y_train = create_dataset(train_data, time_step)
+    X_test, y_test = create_dataset(test_data, time_step)
     class DIYRandomForestRegressor:
         def __init__(self, n_estimators=10, max_depth=None, min_samples_split=2, min_samples_leaf=1, max_features=None, subsample_ratio=0.8, n_jobs=-1, random_state=42):
             self.n_estimators = n_estimators
@@ -369,11 +390,13 @@ def run_diy(max_depth, min_samples_leaf, min_samples_split,n_estimators, max_fea
                dash.dependencies.State('min_samples_leaf', 'value'),
                dash.dependencies.State('min_samples_split', 'value'),
                dash.dependencies.State('n_estimators', 'value'),
-               dash.dependencies.State('max_features', 'value')])
-def run_models(n_clicks, max_depth, min_samples_leaf, min_samples_split,n_estimators, max_features):
+               dash.dependencies.State('max_features', 'value'),
+               dash.dependencies.State('training_size', 'value')])
+def run_models(n_clicks, max_depth, min_samples_leaf, min_samples_split,n_estimators, max_features, training_size):
     if n_clicks:
-        model_diy, exec_time_diy, ram_usage_diy, accuracy_diy, rmse_diy, _ = run_diy(max_depth, min_samples_leaf, min_samples_split,n_estimators, max_features)
-        model_sk, exec_time_sk, ram_usage_sk, accuracy_sk, rmse_sk, _ = run_sk(max_depth, min_samples_leaf, min_samples_split,n_estimators, max_features)
+        print(training_size)
+        model_diy, exec_time_diy, ram_usage_diy, accuracy_diy, rmse_diy, _ = run_diy(max_depth, min_samples_leaf, min_samples_split,n_estimators, max_features, training_size)
+        model_sk, exec_time_sk, ram_usage_sk, accuracy_sk, rmse_sk, _ = run_sk(max_depth, min_samples_leaf, min_samples_split,n_estimators, max_features, training_size)
 
         trace1_sk = []
         trace2_sk = []
