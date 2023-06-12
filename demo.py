@@ -57,7 +57,7 @@ app.layout = html.Div([
    
     dcc.Tabs(id="tabs", children=[
        
-        dcc.Tab(label='Stock Data',children=[
+        dcc.Tab(label='Prediction Stock Data',children=[
             html.H1("Random Forest Model Comparison"),
             html.Label("Number of Estimators:"),
             dcc.Input(id='n_estimators', type='number', value=160),
@@ -82,7 +82,7 @@ app.layout = html.Div([
             html.Div(id='output-container')
         ]),
 
-        dcc.Tab(label='Prediction Stock Data', children=[
+        dcc.Tab(label='Result of Trained Model', children=[
             html.Div([
                 html.H1("Stocks Actual vs Predictions by only RF", 
                         style={'textAlign': 'center'}),
