@@ -53,12 +53,11 @@ print(df)
  
 app.layout = html.Div([
    
-    html.H1("Stock Price Analysis Dashboard", style={"textAlign": "center"}),
+    html.H1("Random Forest Model Comparison", style={"textAlign": "center"}),
    
     dcc.Tabs(id="tabs", children=[
        
-        dcc.Tab(label='Prediction Stock Data',children=[
-            html.H1("Random Forest Model Comparison"),
+        dcc.Tab(label='Train Model',children=[
             html.Label("Number of Estimators:"),
             dcc.Input(id='n_estimators', type='number', value=160),
             html.Br(),
@@ -459,7 +458,7 @@ def run_models(n_clicks, max_depth, min_samples_leaf, min_samples_split,n_estima
                     'rangeselector': {'buttons': list([{'count': 1, 'label': '1M', 
                                                         'step': 'month', 
                                                         'stepmode': 'backward'},
-                                                        {'count': 6, 'label': '6M', 
+                                                        {'count': 12, 'label': '1Y', 
                                                         'step': 'month', 
                                                         'stepmode': 'backward'},
                                                         {'step': 'all'}])},
@@ -483,7 +482,7 @@ def run_models(n_clicks, max_depth, min_samples_leaf, min_samples_split,n_estima
                     'rangeselector': {'buttons': list([{'count': 1, 'label': '1M', 
                                                         'step': 'month', 
                                                         'stepmode': 'backward'},
-                                                        {'count': 6, 'label': '6M', 
+                                                        {'count': 12, 'label': '1Y', 
                                                         'step': 'month', 
                                                         'stepmode': 'backward'},
                                                         {'step': 'all'}])},
@@ -507,7 +506,7 @@ def run_models(n_clicks, max_depth, min_samples_leaf, min_samples_split,n_estima
                     'rangeselector': {'buttons': list([{'count': 1, 'label': '1M', 
                                                         'step': 'month', 
                                                         'stepmode': 'backward'},
-                                                        {'count': 6, 'label': '6M', 
+                                                        {'count': 12, 'label': '1Y', 
                                                         'step': 'month', 
                                                         'stepmode': 'backward'},
                                                         {'step': 'all'}])},
@@ -554,7 +553,7 @@ def update_graph(selected_dropdown):
                    'rangeselector': {'buttons': list([{'count': 1, 'label': '1 Month', 
                                                        'step': 'month', 
                                                        'stepmode': 'backward'},
-                                                      {'count': 6, 'label': '6 Month', 
+                                                        {'count': 12, 'label': '1Y', 
                                                        'step': 'month', 
                                                        'stepmode': 'backward'},
                                                       {'step': 'all'}])},
@@ -596,7 +595,7 @@ def update_graph(selected_dropdown):
                    'rangeselector': {'buttons': list([{'count': 1, 'label': '1 Month', 
                                                        'step': 'month', 
                                                        'stepmode': 'backward'},
-                                                      {'count': 6, 'label': '6 Month', 
+                                                        {'count': 12, 'label': '1Y', 
                                                        'step': 'month', 
                                                        'stepmode': 'backward'},
                                                       {'step': 'all'}])},
@@ -638,7 +637,7 @@ def update_graph(selected_dropdown):
                    'rangeselector': {'buttons': list([{'count': 1, 'label': '1 Month', 
                                                        'step': 'month', 
                                                        'stepmode': 'backward'},
-                                                      {'count': 6, 'label': '6 Month', 
+                                                        {'count': 12, 'label': '1Y', 
                                                        'step': 'month', 
                                                        'stepmode': 'backward'},
                                                       {'step': 'all'}])},
@@ -680,7 +679,7 @@ def update_graph(selected_dropdown):
                    'rangeselector': {'buttons': list([{'count': 1, 'label': '1 Month', 
                                                        'step': 'month', 
                                                        'stepmode': 'backward'},
-                                                      {'count': 6, 'label': '6 Month', 
+                                                        {'count': 12, 'label': '1Y', 
                                                        'step': 'month', 
                                                        'stepmode': 'backward'},
                                                       {'step': 'all'}])},
